@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Support\Facades\Http;
+use App\Models\Info;
 use SimpleXMLElement;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 
 class ApiXmlController extends Controller
 {
@@ -33,6 +35,7 @@ class ApiXmlController extends Controller
             $this->data[$i]['titre'] = $value->title->__toString();
             $this->data[$i]['description'] = $value->description->__toString();
             $this->data[$i]['date_pub'] = $value->pubDate->__toString();
+            $this->data[$i]['lien'] = $value->link->__toString();
             $this->data[$i]['id'] = $i;
             // image
             $content = $value->children('media', true)->content;
@@ -46,8 +49,29 @@ class ApiXmlController extends Controller
         return $this->data;
     }
 
-    public function getNews($page = 1, $perPage = 10)
+    public function SaveToDB() : void
     {
+        $datas = self::getData();
+        foreach($datas as $data)
+        {
+        
+         $info = Info::where('lien',$data['lien'])->first();
+         if(!$info){
+            $save =Info::create([
+                'titre' => $data['titre'],
+                'description' => $data['description'],
+                'lien' => $data['lien'],
+                'date_pub' => $data['date_pub'],
+                'image' => json_encode($data['image']),
+            ]);
+        }
+    }
+    $infos =Info::all();
+    }
+
+    public function getNews($page = 1, $perPage = 15)
+    {
+        // self::SaveToDB();
         $data = self::getData();
         $dataReported = array_chunk($data,$perPage,true);
         $dataCurrent = $dataReported[$page-1];
@@ -58,5 +82,22 @@ class ApiXmlController extends Controller
             'page' => $page,
             'data' => $dataCurrent
         ]);
+    }
+    public function getInfo(String $titre)
+    {
+        $info = '';
+        $data = self::getData();
+        foreach($data as $da){
+            if($da['titre'] == $titre){
+                $info = $da;
+            }
+        }
+        return response()->json([
+            'data' => $info
+        ]);
+    }
+    public function setInfo(Request $req)
+    {
+        dd($req);
     }
 }
